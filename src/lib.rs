@@ -153,6 +153,7 @@ pub struct Log2 {
     tee: bool,
     color: bool,
     module: bool,
+    target: bool,
     filesize: u64,
     count: usize,
     level: String,
@@ -194,6 +195,7 @@ impl Log2 {
             tee: false,
             color: true,
             module: true,
+            target: false,
             filesize: 100 * 1024 * 1024,
             count: 10,
             level: String::new(),
@@ -203,6 +205,11 @@ impl Log2 {
 
     pub fn module(mut self, show: bool) -> Log2 {
         self.module = show;
+        self
+    }
+
+    pub fn target(mut self, show: bool) -> Log2 {
+        self.target = show;
         self
     }
 
@@ -283,6 +290,11 @@ impl log::Log for Log2 {
             origin = format!("[{}] ", module);
         }
 
+        let mut target = String::new();
+        if self.target {
+            target = format!("[{}] ", record.target());
+        }
+
         // stdout
         if self.tee {
             let (level, open, close) = if self.color {
@@ -299,7 +311,7 @@ impl log::Log for Log2 {
                 )
             };
             let line = format!(
-                "{open}{}{close} {open}{}{close} {origin}{}",
+                "{open}{}{close} {open}{}{close} {origin}{target}{}",
                 Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
                 level,
                 record.args()
@@ -310,7 +322,7 @@ impl log::Log for Log2 {
         // file
         if self.path.len() > 0 {
             let line = format!(
-                "[{}] [{}] {origin}{}\n",
+                "[{}] [{}] {origin}{target}{}\n",
                 Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
                 record.level(),
                 record.args()
