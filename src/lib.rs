@@ -148,8 +148,10 @@ pub struct Log2 {
     tx: std::sync::mpsc::Sender<Action>,
     rx: Option<std::sync::mpsc::Receiver<Action>>,
     levels: [ColoredString; 6],
+    levels_nocol: [ColoredString; 6],
     path: String,
     tee: bool,
+    color: bool,
     module: bool,
     filesize: u64,
     count: usize,
@@ -175,12 +177,22 @@ impl Log2 {
             "DEBUG".bright_blue(),
             "TRACE".cyan(),
         ];
+        let levels_nocol = [
+            "OFF".normal(),
+            "ERROR".normal(),
+            "WARN".normal(),
+            "INFO".normal(),
+            "DEBUG".normal(),
+            "TRACE".normal(),
+        ];
         Self {
             tx,
             rx: Some(rx),
             levels,
+            levels_nocol,
             path: String::new(),
             tee: false,
+            color: true,
             module: true,
             filesize: 100 * 1024 * 1024,
             count: 10,
@@ -197,6 +209,12 @@ impl Log2 {
     // split the output to stdout
     pub fn tee(mut self, stdout: bool) -> Log2 {
         self.tee = stdout;
+        self
+    }
+
+    // use colors in the output to stdout
+    pub fn color(mut self, color: bool) -> Log2 {
+        self.color = color;
         self
     }
 
@@ -267,9 +285,19 @@ impl log::Log for Log2 {
 
         // stdout
         if self.tee {
-            let level = &self.levels[record.level() as usize];
-            let open = "[".truecolor(0x87, 0x87, 0x87);
-            let close = "]".truecolor(0x87, 0x87, 0x87);
+            let (level, open, close) = if self.color {
+                (
+                    &self.levels[record.level() as usize],
+                    "[".truecolor(0x87, 0x87, 0x87),
+                    "]".truecolor(0x87, 0x87, 0x87),
+                )
+            } else {
+                (
+                    &self.levels_nocol[record.level() as usize],
+                    "[".normal(),
+                    "]".normal(),
+                )
+            };
             let line = format!(
                 "{open}{}{close} {open}{}{close} {origin}{}",
                 Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
