@@ -154,7 +154,7 @@ pub struct Log2 {
     color: bool,
     module: bool,
     target: bool,
-    timeformat: String,
+    timeformat: Option<String>,
     utc: bool,
     filesize: u64,
     count: usize,
@@ -198,7 +198,7 @@ impl Log2 {
             color: true,
             module: true,
             target: false,
-            timeformat: "%Y-%m-%d %H:%M:%S%.3f".into(),
+            timeformat: Some("%Y-%m-%d %H:%M:%S%.3f".into()),
             utc: false,
             filesize: 100 * 1024 * 1024,
             count: 10,
@@ -222,7 +222,7 @@ impl Log2 {
         self
     }
 
-    pub fn timeformat(mut self, timeformat: String) -> Log2 {
+    pub fn timeformat(mut self, timeformat: Option<String>) -> Log2 {
         self.timeformat = timeformat;
         self
     }
@@ -309,10 +309,13 @@ impl log::Log for Log2 {
             target = format!("[{}] ", record.target());
         }
 
-        let timestamp = if self.utc {
-            Utc::now().format(&self.timeformat)
-        } else {
-            Local::now().format(&self.timeformat)
+        let timestamp = match &self.timeformat {
+            Some(timeformat) => if self.utc {
+                Utc::now().format(timeformat).to_string()
+            } else {
+                Local::now().format(timeformat).to_string()
+            }
+            _ => "".into()
         };
 
         // stdout
@@ -330,9 +333,14 @@ impl log::Log for Log2 {
                     "]".normal(),
                 )
             };
+            let ts = if timestamp.len() > 0 {
+                format!("{open}{}{close} ", timestamp)
+            } else {
+                "".into()
+            };
             let line = format!(
-                "{open}{}{close} {open}{}{close} {origin}{target}{}",
-                timestamp,
+                "{}{open}{}{close} {origin}{target}{}",
+                ts,
                 level,
                 record.args()
             );
@@ -341,9 +349,14 @@ impl log::Log for Log2 {
 
         // file
         if self.path.len() > 0 {
+            let ts = if timestamp.len() > 0 {
+                format!("[{}] ", timestamp)
+            } else {
+                "".into()
+            };
             let line = format!(
-                "[{}] [{}] {origin}{target}{}\n",
-                timestamp,
+                "{}[{}] {origin}{target}{}\n",
+                ts,
                 record.level(),
                 record.args()
             );
