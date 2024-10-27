@@ -154,6 +154,7 @@ pub struct Log2 {
     color: bool,
     module: bool,
     target: bool,
+    timeformat: String,
     utc: bool,
     filesize: u64,
     count: usize,
@@ -197,6 +198,7 @@ impl Log2 {
             color: true,
             module: true,
             target: false,
+            timeformat: "%Y-%m-%d %H:%M:%S%.3f".into(),
             utc: false,
             filesize: 100 * 1024 * 1024,
             count: 10,
@@ -217,6 +219,11 @@ impl Log2 {
 
     pub fn utc(mut self, utc: bool) -> Log2 {
         self.utc = utc;
+        self
+    }
+
+    pub fn timeformat(mut self, timeformat: String) -> Log2 {
+        self.timeformat = timeformat;
         self
     }
 
@@ -303,9 +310,9 @@ impl log::Log for Log2 {
         }
 
         let timestamp = if self.utc {
-            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f")
+            Utc::now().format(&self.timeformat)
         } else {
-            Local::now().format("%Y-%m-%d %H:%M:%S%.3f")
+            Local::now().format(&self.timeformat)
         };
 
         // stdout
