@@ -99,7 +99,7 @@
 //!log.8.txt
 //!log.9.txt
 //!```
-use chrono::Local;
+use chrono::{Local, Utc};
 use colored::*;
 use core::fmt;
 use log::{Level, LevelFilter, Metadata, Record};
@@ -154,6 +154,7 @@ pub struct Log2 {
     color: bool,
     module: bool,
     target: bool,
+    utc: bool,
     filesize: u64,
     count: usize,
     level: String,
@@ -196,6 +197,7 @@ impl Log2 {
             color: true,
             module: true,
             target: false,
+            utc: false,
             filesize: 100 * 1024 * 1024,
             count: 10,
             level: String::new(),
@@ -210,6 +212,11 @@ impl Log2 {
 
     pub fn target(mut self, show: bool) -> Log2 {
         self.target = show;
+        self
+    }
+
+    pub fn utc(mut self, utc: bool) -> Log2 {
+        self.utc = utc;
         self
     }
 
@@ -295,6 +302,12 @@ impl log::Log for Log2 {
             target = format!("[{}] ", record.target());
         }
 
+        let timestamp = if self.utc {
+            Utc::now().format("%Y-%m-%d %H:%M:%S%.3f")
+        } else {
+            Local::now().format("%Y-%m-%d %H:%M:%S%.3f")
+        };
+
         // stdout
         if self.tee {
             let (level, open, close) = if self.color {
@@ -312,7 +325,7 @@ impl log::Log for Log2 {
             };
             let line = format!(
                 "{open}{}{close} {open}{}{close} {origin}{target}{}",
-                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                timestamp,
                 level,
                 record.args()
             );
@@ -323,7 +336,7 @@ impl log::Log for Log2 {
         if self.path.len() > 0 {
             let line = format!(
                 "[{}] [{}] {origin}{target}{}\n",
-                Local::now().format("%Y-%m-%d %H:%M:%S%.3f"),
+                timestamp,
                 record.level(),
                 record.args()
             );
